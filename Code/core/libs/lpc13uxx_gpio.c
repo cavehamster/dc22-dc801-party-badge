@@ -77,32 +77,32 @@ volatile uint32_t gint1_edge_counter = 0;
 ** Returned value:		None
 ** 
 *****************************************************************************/
-void PIN_INT0_IRQHandler(void)
-{
-  pin_int0_counter++;
-  if ( LPC_GPIO_PIN_INT->IST & (0x1<<0) )
-  {
-	if ( LPC_GPIO_PIN_INT->ISEL & (0x1<<0) )
-	{
-	  pin_int0_level_counter++;
-	}
-	else
-	{
-	  if ( ( LPC_GPIO_PIN_INT->RISE & (0x1<<0) ) && ( LPC_GPIO_PIN_INT->IENR & (0x1<<0) ) )
-	  {
-		pin_int0_rising_edge_counter++;
-		LPC_GPIO_PIN_INT->RISE = 0x1<<0;
-	  }
-	  if ( ( LPC_GPIO_PIN_INT->FALL & (0x1<<0) ) && ( LPC_GPIO_PIN_INT->IENF & (0x1<<0) ) )
-	  {
-		pin_int0_falling_edge_counter++;
-		LPC_GPIO_PIN_INT->FALL = 0x1<<0;
-	  }
-	  LPC_GPIO_PIN_INT->IST = 0x1<<0;
-	}
-  }		
-  return;
-}
+//void PIN_INT0_IRQHandler(void)
+//{
+//  pin_int0_counter++;
+//  if ( LPC_GPIO_PIN_INT->IST & (0x1<<0) )
+//  {
+//	if ( LPC_GPIO_PIN_INT->ISEL & (0x1<<0) )
+//	{
+//	  pin_int0_level_counter++;
+//	}
+//	else
+//	{
+//	  if ( ( LPC_GPIO_PIN_INT->RISE & (0x1<<0) ) && ( LPC_GPIO_PIN_INT->IENR & (0x1<<0) ) )
+//	  {
+//		pin_int0_rising_edge_counter++;
+//		LPC_GPIO_PIN_INT->RISE = 0x1<<0;
+//	  }
+//	  if ( ( LPC_GPIO_PIN_INT->FALL & (0x1<<0) ) && ( LPC_GPIO_PIN_INT->IENF & (0x1<<0) ) )
+//	  {
+//		pin_int0_falling_edge_counter++;
+//		LPC_GPIO_PIN_INT->FALL = 0x1<<0;
+//	  }
+//	  LPC_GPIO_PIN_INT->IST = 0x1<<0;
+//	}
+//  }
+//  return;
+//}
 
 /*****************************************************************************
 ** Function name:		PIN_INT1_IRQHandler

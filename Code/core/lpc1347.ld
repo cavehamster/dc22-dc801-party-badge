@@ -24,8 +24,10 @@ SECTIONS {
 		_end_text = .;
 	} >flash
 
-	.data : 
+
+	.data :
 	{
+		_start_data_lma = LOADADDR(.data);
 		_start_data = .;
 		*(.data)
 		_end_data = .;

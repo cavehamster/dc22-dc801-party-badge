@@ -43,13 +43,17 @@ extern "C" {
     SPI
     -----------------------------------------------------------------------
 
-    CFG_SSP_SCK0_LOCATION     The location of the SCK pin for SSP0
-    CFG_SSP_MISO1_LOCATION    The location of the MISO1 pin for SSP1
-    CFG_SSP_MOSI1_LOCATION    The location of the MOSI1 pin for SSP1
-    CFG_SSP_SCK1_LOCATION     The location of the SCK pin for SSP1
+    CFG_SSP0_MISO1_LOCATION    The location of the MISO1 pin for SSP0
+    CFG_SSP0_MOSI1_LOCATION    The location of the MOSI1 pin for SSP0
+    CFG_SSP0_SCK1_LOCATION     The location of the SCK pin for SSP0
+    CFG_SSP1_MISO1_LOCATION    The location of the MISO1 pin for SSP1
+    CFG_SSP1_MOSI1_LOCATION    The location of the MOSI1 pin for SSP1
+    CFG_SSP1_SCK1_LOCATION     The location of the SCK pin for SSP1
 
     -----------------------------------------------------------------------*/
-    #define CFG_SSP_SCK0_0_6            (6)     // Used by USBConnect
+	#define CFG_SSP_MISO0_0_8			(27)
+	#define CFG_SSP_MOSI0_0_9			(28)
+	#define CFG_SSP_SCK0_0_6            (6)     // Used by USBConnect
     #define CFG_SSP_SCK0_0_10           (10)    // Used by SWD
     #define CFG_SSP_SCK0_1_29           (29)
 
@@ -61,19 +65,25 @@ extern "C" {
     #define CFG_SSP_SCK1_1_20           (20)
 
     // Select the appropriate pin locations here
-    //#define CFG_SSP_SCK0_LOCATION       (CFG_SSP_SCK0_1_29)
-    //#define CFG_SSP_MISO1_LOCATION      (CFG_SSP_MISO1_1_21)
-    #define CFG_SSP_MOSI1_LOCATION      (CFG_SSP_MOSI1_1_22)
-    #define CFG_SSP_SCK1_LOCATION       (CFG_SSP_SCK1_1_15)
+    #define CFG_SSP0_SCK_LOCATION       (CFG_SSP_SCK0_1_29)
+    #define CFG_SSP0_MISO_LOCATION      (CFG_SSP_MISO0_0_8)
+    #define CFG_SSP0_MOSI_LOCATION      (CFG_SSP_MOSI0_0_9)
+
+    #define CFG_SSP1_SCK_LOCATION       (CFG_SSP_SCK1_1_15)
+	//#define CFG_SSP1_MISO_LOCATION      (CFG_SSP1_MISO1_1_21) 	// Not used for VFD
+	#define CFG_SSP1_MOSI_LOCATION      (CFG_SSP_MOSI1_1_22)
 
     // Set the phase and polarity for SSP0 and SSP1
-//    #define CFG_SSP_CPOL0               (0)
-//    #define CFG_SSP_CPHA0               (1)   /* CC3000 = Mode 1 */
-    #define CFG_SSP_CPOL1               (0)
-    #define CFG_SSP_CPHA1               (0)
+    #define CFG_SSP0_CPOL               (0)
+    #define CFG_SSP0_CPHA               (0)
+    #define CFG_SSP1_CPOL               (0)
+    #define CFG_SSP1_CPHA               (0)
 /*=========================================================================*/
 
+#define DEV_SSP0	0
+#define DEV_SSP1	1
 
+#define SSP0_FIFOSIZE			8
 #define SSP1_FIFOSIZE            8       /* SPI read and write buffer size */
 
 /* SSP Clock div (0..255) */
@@ -91,57 +101,64 @@ extern "C" {
 #define SCB_CLKDIV_MASK    (0x000000FF)
 
 /* SSP Serial Clock Rate Values */
-#define SSP1_SCR_1          (0x00000100)
-#define SSP1_SCR_2          (0x00000200)
-#define SSP1_SCR_3          (0x00000300)
-#define SSP1_SCR_4          (0x00000400)
-#define SSP1_SCR_5          (0x00000500)
-#define SSP1_SCR_6          (0x00000600)
-#define SSP1_SCR_7          (0x00000700)
-#define SSP1_SCR_8          (0x00000800)
-#define SSP1_SCR_9          (0x00000900)
-#define SSP1_SCR_10         (0x00000A00)
-#define SSP1_SCR_11         (0x00000B00)
-#define SSP1_SCR_12         (0x00000C00)
-#define SSP1_SCR_13         (0x00000D00)
-#define SSP1_SCR_14         (0x00000E00)
-#define SSP1_SCR_15         (0x00000F00)
-#define SSP1_SCR_16         (0x00001000)
+#define SSP_SCR_1          (0x00000100)
+#define SSP_SCR_2          (0x00000200)
+#define SSP_SCR_3          (0x00000300)
+#define SSP_SCR_4          (0x00000400)
+#define SSP_SCR_5          (0x00000500)
+#define SSP_SCR_6          (0x00000600)
+#define SSP_SCR_7          (0x00000700)
+#define SSP_SCR_8          (0x00000800)
+#define SSP_SCR_9          (0x00000900)
+#define SSP_SCR_10         (0x00000A00)
+#define SSP_SCR_11         (0x00000B00)
+#define SSP_SCR_12         (0x00000C00)
+#define SSP_SCR_13         (0x00000D00)
+#define SSP_SCR_14         (0x00000E00)
+#define SSP_SCR_15         (0x00000F00)
+#define SSP_SCR_16         (0x00001000)
 
 /*  Current status of the SSP controller.  */
-#define SSP1_SR_TFE_MASK      (0x00000001) // Transmit FIFO empty
-#define SSP1_SR_TFE_EMPTY     (0x00000001)
-#define SSP1_SR_TFE_NOTEMPTY  (0x00000000)
-#define SSP1_SR_TNF_MASK      (0x00000002) // Transmit FIFO not full
-#define SSP1_SR_TNF_NOTFULL   (0x00000002)
-#define SSP1_SR_TNF_FULL      (0x00000000)
-#define SSP1_SR_RNE_MASK      (0x00000004) // Receive FIFO not empty
-#define SSP1_SR_RNE_NOTEMPTY  (0x00000004)
-#define SSP1_SR_RNE_EMPTY     (0x00000000)
-#define SSP1_SR_RFF_MASK      (0x00000008) // Receive FIFO full
-#define SSP1_SR_RFF_FULL      (0x00000008)
-#define SSP1_SR_RFF_NOTFULL   (0x00000000)
-#define SSP1_SR_BSY_MASK      (0x00000010) // Busy Flag
-#define SSP1_SR_BSY_IDLE      (0x00000000)
-#define SSP1_SR_BSY_BUSY      (0x00000010)
+#define SSP_SR_TFE_MASK      (0x00000001) // Transmit FIFO empty
+#define SSP_SR_TFE_EMPTY     (0x00000001)
+#define SSP_SR_TFE_NOTEMPTY  (0x00000000)
+#define SSP_SR_TNF_MASK      (0x00000002) // Transmit FIFO not full
+#define SSP_SR_TNF_NOTFULL   (0x00000002)
+#define SSP_SR_TNF_FULL      (0x00000000)
+#define SSP_SR_RNE_MASK      (0x00000004) // Receive FIFO not empty
+#define SSP_SR_RNE_NOTEMPTY  (0x00000004)
+#define SSP_SR_RNE_EMPTY     (0x00000000)
+#define SSP_SR_RFF_MASK      (0x00000008) // Receive FIFO full
+#define SSP_SR_RFF_FULL      (0x00000008)
+#define SSP_SR_RFF_NOTFULL   (0x00000000)
+#define SSP_SR_BSY_MASK      (0x00000010) // Busy Flag
+#define SSP_SR_BSY_IDLE      (0x00000000)
+#define SSP_SR_BSY_BUSY      (0x00000010)
 
 /* Control Register 1 */
-#define SSP1_CR1_LBM_MASK     (0x00000001) // Loop back mode
-#define SSP1_CR1_LBM_NORMAL   (0x00000000)
-#define SSP1_CR1_LBM_INVERTED (0x00000001) // MISO/MOSI are reversed
-#define SSP1_CR1_SSE_MASK     (0x00000002) // SSP enable
-#define SSP1_CR1_SSE_DISABLED (0x00000000)
-#define SSP1_CR1_SSE_ENABLED  (0x00000002)
-#define SSP1_CR1_MS_MASK      (0x00000004) // Master/Slave Mode
-#define SSP1_CR1_MS_MASTER    (0x00000000)
-#define SSP1_CR1_MS_SLAVE     (0x00000004)
-#define SSP1_CR1_SOD_MASK     (0x00000008) // Slave output disable
+#define SSP_CR1_LBM_MASK     (0x00000001) // Loop back mode
+#define SSP_CR1_LBM_NORMAL   (0x00000000)
+#define SSP_CR1_LBM_INVERTED (0x00000001) // MISO/MOSI are reversed
+#define SSP_CR1_SSE_MASK     (0x00000002) // SSP enable
+#define SSP_CR1_SSE_DISABLED (0x00000000)
+#define SSP_CR1_SSE_ENABLED  (0x00000002)
+#define SSP_CR1_MS_MASK      (0x00000004) // Master/Slave Mode
+#define SSP_CR1_MS_MASTER    (0x00000000)
+#define SSP_CR1_MS_SLAVE     (0x00000004)
+#define SSP_CR1_SOD_MASK     (0x00000008) // Slave output disable
+
+void ssp0ClockSlow(void);
+void ssp0ClockFast(void);
+void ssp0Init(void);
+void ssp0Send(uint8_t *buf, uint32_t length);
+uint8_t ssp0SendChar(uint8_t data);
+void ssp0Receive(uint8_t *buf, uint32_t length);
 
 void ssp1ClockSlow(void);
 void ssp1ClockFast(void);
 void ssp1Init(void);
 void ssp1Send(uint8_t *buf, uint32_t length);
-void sspSend(uint8_t data);
+void ssp1SendChar(uint8_t data);
 void ssp1Receive(uint8_t *buf, uint32_t length);
 
 #ifdef __cplusplus

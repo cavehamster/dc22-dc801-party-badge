@@ -1,16 +1,20 @@
 /**
- * @brief Header file for main
+ *
+ * @brief dc801 defcon 22 badge, revisted!
  * @file main.h
+ * @author hamster
  *
  */
 
 #ifndef MAIN_H_
 #define MAIN_H_
 
-#include "LPC13Uxx.h"
+// 4 bytes
+#define FIRMWARE_REV	"02.1"
+
+// Millisecond tick counter
+extern volatile uint32_t msTicks;
 
 int main(void);
-void delay_ms(uint32_t);
-
 
 #endif

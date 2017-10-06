@@ -6,6 +6,7 @@ extern unsigned int _start_data;
 extern unsigned int _end_data;
 extern unsigned int _start_bss;
 extern unsigned int _end_bss;
+extern unsigned int _start_data_lma;
 
 extern int main(void);
 extern void SystemInit(void);
@@ -110,7 +111,7 @@ void Reset_Handler(void) {
 	unsigned int *src, *dst;
 	
 	/* Copy data section from flash to RAM */
-	src = &_end_text;
+	src = &_start_data_lma;
 	dst = &_start_data;
 	while (dst < &_end_data)
 		*dst++ = *src++;

@@ -1,65 +1,71 @@
 /**
- * @brief Defines for the VFD interface
+ *
+ * @brief Driver for the VFD screen
  * @file vfd.h
+ * @author hamster
+ *
  */
 
-#ifndef __VFD
-#define __VFD
+#ifndef _VFD_H
+#define _VFD_H
 
-#ifdef __cplusplus
-	extern "C" {
-#endif
+#define VFD_MAX_ROW	1
+#define VFD_MAX_COL	15
 
-// INCLUDES
-#include "core/inc/lpc13uxx_gpio.h"
-#include "drivers/ssp1.h"
+#define VFD_COMMAND						0xF8
+#define VFD_INSTRUCTION_CHAR			0xFA
+#define VFD_INSTRUCTION_CLEAR			0x01
+#define VFD_INSTRUCTION_INIT			0x0F
 
-// STROBE AND CLOCK MACROS
-#define VFD_STROBE_START { uint8_t i; LPC_GPIO->CLR[ 1 ] = (1 << 14); for( i=0; i<48; i++ ) __NOP(); }
-#define VFD_STROBE_STOP { uint8_t i; LPC_GPIO->SET[ 1 ] = (1 << 14); for( i=0; i<48; i++ ) __NOP(); }
-#define VFD_START_BYTE		0b11111010 //I'm going to send you characters
-#define VFD_COMMAND_BYTE	0b11111000 //commanding
-#define VFD_CLOCK { uint8_t i; LPC_GPIO->CLR [ 1 ] = (1 << 15); for( i=0; i<48; i++ ) __NOP();  LPC_GPIO->SET [ 1 ] = (1 << 15); for( i=0; i<48; i++ ) __NOP(); }
-#define VFD_DATA_HIGH LPC_GPIO-> SET [ 1 ] = (1 << 22); VFD_CLOCK
-#define VFD_DATA_LOW LPC_GPIO-> CLR [ 1 ] = (1 << 22); VFD_CLOCK
+// Strobe and Clock Macros
+#define VFD_STROBE_START 	{ uint8_t i; LPC_GPIO->CLR[ 1 ] = (1 << 14); for( i=0; i<48; i++ ) __NOP(); }
+#define VFD_STROBE_STOP 	{ uint8_t i; LPC_GPIO->SET[ 1 ] = (1 << 14); for( i=0; i<48; i++ ) __NOP(); }
 
 
-typedef enum {
-	NOTINITIALIZED,	//!< NOTINITIALIZED
-	INITIALIZING,  	//!< INITIALIZING
-	INITIALIZED,   	//!< INITIALIZED
-	POWEREDOFF,    	//!< POWEREDOFF
-	BUSY           	//!< BUSY
-} eStatus;
+typedef struct {
+	uint8_t row;
+	uint8_t col;
+} VFD_Position;
 
 typedef enum {
-	ON,				//! Display on
-	SLEEP,			//! Display sleep
-	OFF				//! Display off
-} ePowerstate;
+	VFD_NOTINITIALIZED,
+	VFD_INITIALIZING,
+	VFD_INITIALIZED,
+	VFD_POWEREDOFF,
+	VFD_BUSY
+} VFD_Status;
 
 typedef enum {
-	VFD_INIT,			//! Initialize
-	VFD_CLEAR,			//! Clear the display
-	VFD_ENABLE,		//! Enable display
-	VFD_DISABLE		//! Disable display
-} eCommand;
+	VFD_OFF,
+	VFD_ON
+} VFD_Powerstate;
+
+typedef enum {
+	VFD_INIT,
+	VFD_CLEAR,
+	VFD_ENABLE,
+	VFD_DISABLE,
+	VFD_CURSOR_ON,
+	VFD_CURSOR_OFF,
+	VFD_CURSOR_BLINK,
+	VFD_CURSOR_NO_BLINK
+} VFD_Command;
 
 typedef struct{
-	eStatus VDFStatus;
-	uint8_t x;
+	bool displayOn;
+	bool cursorOn;
+	bool blinkOn;
+	VFD_Position position;
+	VFD_Powerstate powerState;
+	VFD_Status status;
 } VFD_Display;
 
 void VFDInit(void);
-void VFDWriteString(char*, int);
-void VFDSendFiller(void);
-uint8_t VFDSetPower(ePowerstate);
-void VFDWriteChar(char);
-uint8_t VFDSendCommand (eCommand);
+void VFDWriteString(char* string);
+void VFDSetPower(VFD_Powerstate newState);
+void VFDWriteChar(char newChar);
+void VFDSendCommand (VFD_Command newCommand);
+void VFDSetPosition(uint8_t row, uint8_t col);
 
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

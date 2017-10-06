@@ -407,6 +407,34 @@ void print_string( uint8_t *str_ptr )
   return;
 }
 
+void print_char( uint8_t data )
+{
+    while((LPC_USART->LSR & 0x60) != 0x60);
+    LPC_USART->THR = data;
+
+  return;
+}
+
+
+void lpcprintf(const char *pFormat, ...){
+	char string[64];
+
+	va_list    ap;
+
+	va_start(ap, pFormat);
+	vsnprintf(string, 64, pFormat, ap);
+	va_end(ap);
+
+	uint8_t pos = 0;
+	while(string[pos] != 0x00){
+		while((LPC_USART->LSR & 0x60) != 0x60);
+		LPC_USART->THR = string[pos];
+		pos++;
+	}
+	return;
+
+}
+
 /*****************************************************************************
 ** Function name:		get_key
 **

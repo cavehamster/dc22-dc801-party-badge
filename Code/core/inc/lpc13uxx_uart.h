@@ -59,11 +59,16 @@
 #define RS485_DCTRL		(0x1<<4)
 #define RS485_OINV		(0x1<<5)
 
+#include <stdio.h>
+#include <stdarg.h>
+
 void ModemInit( void );
 void UARTInit(uint32_t Baudrate);
 void USART_IRQHandler(void);
 void UARTSend(uint8_t *BufferPtr, uint32_t Length);
 void print_string( uint8_t *str_ptr );
+void print_char(uint8_t data);
+void lpcprintf(const char *pFormat, ...);
 uint8_t get_key( void );
 
 #endif /* end __UART_H */

@@ -2,43 +2,85 @@
  *
  * @brief Driver for the VFD display
  * @file vfd.c
+ * @author hamster
  *
- * Based on code developed by @d4rkm4tter
+ * Based on code developed by @d4rkm4tter - well, at one point.  It's been heavily refactored.
  *
  */
 
+#include <stdint.h>
 
+#include "LPC13Uxx.h"
+#include "lpc_types.h"
+#include "core/inc/lpc13uxx_gpio.h"
+#include "drivers/common.h"
+#include "drivers/ssp.h"
 #include "vfd.h"
 #include <string.h>
 
+#include <inttypes.h>
+
+static VFD_Display VFDStatus;
 
 /**
- * @brief Initialize the VFD display
+ * Initialize the VFD display
  */
 void VFDInit(void) {
-	// TODO: Check initialization state
 
-	// Outputs
-	LPC_GPIO->DIR[PORT1] |= (1<<24);	// Rear LED
-	LPC_GPIO->DIR[PORT0] |= (1<<7);		// RGB Shift Reg. Data
-	LPC_GPIO->DIR[PORT0] |= (1<<4);		// VFD Power
+	// Configure as outputs
+	LPC_GPIO->DIR[PORT0] |= (1<<4);		// VFD Power enable
 	LPC_GPIO->DIR[PORT1] |= (1<<14);	// VFD Strobe
 	LPC_GPIO->DIR[PORT1] |= (1<<15);	// VFD Clock
 	LPC_GPIO->DIR[PORT1] |= (1<<22);	// VFD Data
 	
+	memset(&VFDStatus, 0, sizeof(VFDStatus));
+
 	ssp1Init();
 	
 	VFD_STROBE_STOP;
 	
-//	VFDSendCommand(0b00001111);
-	VFDSendCommand(VFD_INIT);
-	
-	VFDSetPower(ON);
+	VFDSetPower(VFD_OFF);
+	//VFDSendCommand(VFD_INIT);
+	//VFDSendCommand(VFD_DISABLE);
+
+}
+
+
+/**
+ * Move the cursor to a position on the screen
+ *
+ * @param row Row, either 0 or 1
+ * @param col Col, 0-16
+ * @note If the row/col is out of range, no move is done
+ */
+void VFDSetPosition(uint8_t row, uint8_t col){
+
+	if(row > VFD_MAX_ROW) return;
+	if(col > VFD_MAX_COL) return;
+
+	// OK, encode the position and set it
+	uint8_t position = 0x80 + col;
+
+	if(row == 0){
+		position |= 0x00;
+	}
+	else{
+		position |= 0x40;
+	}
+
+	VFDStatus.position.row = row;
+	VFDStatus.position.col = col;
+
+	VFD_STROBE_START;
+	ssp1SendChar(VFD_COMMAND);
+	ssp1SendChar(position);
+	VFD_STROBE_STOP;
 
 }
 
 /**
- * @brief Set display brightness
+ * Set display brightness
+ *
  * @param percent amount in percent
  * @todo implement function
  */
@@ -49,101 +91,122 @@ void setBrightness(int percent){
 }
 
 /**
- * @brief Set the power state of the VFD
- * @return VFD status
+ * Set the power state of the VFD
+ *
+ * @param newState Either on or off
  */
-uint8_t VFDSetPower(ePowerstate newState) {
+void VFDSetPower(VFD_Powerstate newState) {
 
-	if (newState == ON) {
-		LPC_GPIO->CLR[PORT0] = 1<<4; //>...>...// Turn on the VFD Power
-		
-		// TODO: Update the VFD Status
-
-	} else if(newState == SLEEP) {
-		LPC_GPIO->SET[PORT0] = 1<<4;//>...>...// Turn off the VFD Power
-		// TODO: Update the VFD Status
-
-	} else if(newState == OFF) {
-		LPC_GPIO->SET[PORT0] = 1<<4;//>...>...// Turn off the VFD Power
-		// TODO: Update the VFD Status
+	switch(newState){
+		case VFD_ON:
+			// Power on the VFD
+			LPC_GPIO->CLR[PORT0] = 1<<4;
+			VFDStatus.powerState = VFD_ON;
+			break;
+		case VFD_OFF:
+			// Power off the VFD
+			LPC_GPIO->SET[PORT0] = 1<<4;
+			VFDStatus.powerState = VFD_OFF;
+			break;
+		default:
+			// No change in state
+			break;
 	}
-
-	return 0;
 
 }
 
-
-
 /**
- * @brief Send a command to the display
+ * Send a command to the display
+ *
  * @param command
- * @return to be implemented
  */
-uint8_t VFDSendCommand(eCommand command) {
+void VFDSendCommand(VFD_Command command) {
 
-	VFD_STROBE_START;
-	sspSend(VFD_COMMAND_BYTE);
+	uint8_t instruction;
 
 	switch(command){
 		case VFD_CLEAR:
-			sspSend(1);
+			// Clear the display, fills the internal buffer with 0x20 (spaces)
+			instruction = VFD_INSTRUCTION_CLEAR;
+			VFDSetPosition(0, 0);
 			break;
 		case VFD_INIT:
-			sspSend(0b00001111);
+			// Display on, cursor on, blink on
+			instruction = VFD_INSTRUCTION_INIT;
+			VFDSetPosition(0, 0);
+			break;
+		case VFD_ENABLE:
+			VFDStatus.displayOn = true;
+			instruction = (0x08 | (VFDStatus.displayOn << 2) | (VFDStatus.cursorOn << 1) | VFDStatus.blinkOn);
+			break;
+		case VFD_DISABLE:
+			VFDStatus.displayOn = false;
+			instruction = (0x08 | (VFDStatus.displayOn << 2) | (VFDStatus.cursorOn << 1) | VFDStatus.blinkOn);
+			break;
+		case VFD_CURSOR_ON:
+			VFDStatus.cursorOn = true;
+			instruction = (0x08 | (VFDStatus.displayOn << 2) | (VFDStatus.cursorOn << 1) | VFDStatus.blinkOn);
+			break;
+		case VFD_CURSOR_OFF:
+			VFDStatus.cursorOn = false;
+			instruction = (0x08 | (VFDStatus.displayOn << 2) | (VFDStatus.cursorOn << 1) | VFDStatus.blinkOn);
+			break;
+		case VFD_CURSOR_BLINK:
+			VFDStatus.blinkOn = true;
+			instruction = (0x08 | (VFDStatus.displayOn << 2) | (VFDStatus.cursorOn << 1) | VFDStatus.blinkOn);
+			break;
+		case VFD_CURSOR_NO_BLINK:
+			VFDStatus.blinkOn = false;
+			instruction = (0x08 | (VFDStatus.displayOn << 2) | (VFDStatus.cursorOn << 1) | VFDStatus.blinkOn);
 			break;
 		default:
 			break;
 
 	}
+
+	VFD_STROBE_START;
+	ssp1SendChar(VFD_COMMAND);
+	ssp1SendChar(instruction);
 	VFD_STROBE_STOP;
 
-	return 0;
 }
 
-
 /**
- * @brief Write a string to the display
+ * Write a string to the display
+ *
  * @param str the string to write, null terminated
  * @param filler whether to send the line filler
  */
-void VFDWriteString(char* str, int filler){
+void VFDWriteString(char* str){
 
 	int len = strlen(str);
 
 	for(int i = 0; i< len; i++){
-		if(i == 16 && filler == 1){
-			VFDSendFiller();
-		}
 		VFDWriteChar(str[i]);
 	}
 	
 }
 
 /**
- * @brief Fills in the end of the display buffer
+ * Send a char to the display
  *
- * Think about the buffer like 1 big ass 80 byte buffer that only shows you the first
- * 16 bytes and the middle 41-57 bytes, aka the left side of it. Not cool bro, not cool at all.
- * The point is, make it work with padding for stuff somehow.
- *
- */
-void VFDSendFiller(void){
-
-	for(int i = 0; i < 24; i++){
-		VFDWriteChar(' ');
-	}
-
-}
-
-/**
- * @brief Send a char to the display
  * @param newChar
  */
 void VFDWriteChar(char newChar){
 
+	// Figure out if we need goto the next row
+	if(VFDStatus.position.col == 15){
+		VFDStatus.position.row++;
+		VFDStatus.position.col = 0;
+		if(VFDStatus.position.row > 1){
+			VFDStatus.position.row = 0;
+		}
+		VFDSetPosition(VFDStatus.position.row, VFDStatus.position.col);
+	}
+
 	VFD_STROBE_START;
-	sspSend(VFD_START_BYTE);
-	sspSend(newChar);
+	ssp1SendChar(VFD_INSTRUCTION_CHAR);
+	ssp1SendChar(newChar);
 	VFD_STROBE_STOP;
 
 }

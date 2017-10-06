@@ -1,0 +1,294 @@
+/*
+ * bluetooth.c
+ *
+ *  Created on: Aug 12, 2017
+ *      Author: hamster
+ */
+
+#include "bluetooth.h"
+#include "LPC13Uxx.h"
+#include <stdio.h>
+#include <string.h>
+#include "drivers/ssp.h"
+#include "drivers/common.h"
+#include "core/inc/lpc13uxx_gpio.h"
+#include "core/inc/lpc13uxx_uart.h"
+
+static const setup_messages setupMessages[NB_SETUP_MESSAGES] = SETUP_MESSAGES_CONTENT;
+
+// OK, the bluetooth module is connected as such:
+//
+//
+// /RDYN (16) is PIO1_16 (Note: remove black wire from VFD pins on back of board and solder to the lower left of the uP)
+// MISO (14) is PIO0_8 (27)
+// MOSI (13) is PIO0_9 (28)
+// /REQN (12) is PIO0_22 (30)
+// SCK (11) is PIO1_29 (31)
+// ACTIVE (6) is PIO0_17 (45)
+// RESET () is PIO1_21 (26)
+
+
+void PIN_INT0_IRQHandler(void){
+
+    //LPC_GPIO_PORT->SET[0] = 0x10000;
+	if ( LPC_GPIO_PIN_INT->IST & (0x1<<0) ){
+		LPC_GPIO_PIN_INT->IST = 0x1<<0;		// Clear the interrupt
+	}
+
+    lpcprintf("*");
+
+//  pin_int0_counter++;
+//  if ( LPC_GPIO_PIN_INT->IST & (0x1<<0) ){
+//	if ( LPC_GPIO_PIN_INT->ISEL & (0x1<<0) ){
+//	  pin_int0_level_counter++;
+//	}
+//	else{
+//	  if ( ( LPC_GPIO_PIN_INT->RISE & (0x1<<0) ) && ( LPC_GPIO_PIN_INT->IENR & (0x1<<0) ) ){
+//		pin_int0_rising_edge_counter++;
+//		LPC_GPIO_PIN_INT->RISE = 0x1<<0;
+//	  }
+//	  if ( ( LPC_GPIO_PIN_INT->FALL & (0x1<<0) ) && ( LPC_GPIO_PIN_INT->IENF & (0x1<<0) ) ){
+//		pin_int0_falling_edge_counter++;
+//		LPC_GPIO_PIN_INT->FALL = 0x1<<0;
+//	  }
+//	  LPC_GPIO_PIN_INT->IST = 0x1<<0;
+//	}
+//  }
+  return;
+
+}
+
+/**
+ * Initialize the bluetooth chip
+ */
+void bluetoothInit(void){
+
+	// Setup the GPIOs
+	LPC_GPIO->DIR[PORT1] &= ~(1<<16);	// /RDYN is an input to uP
+	LPC_GPIO->DIR[PORT0] |= (1<<22);	// /REQN is an output to BLE
+	LPC_GPIO->DIR[PORT1] |= (1<<21);	// Reset pin
+	LPC_GPIO->DIR[PORT1] &= ~(1<<17);	// ACTIVE is an input to uP
+	LPC_GPIO->DIR[PORT0] |= (1<<28);	// MOSI is output
+	LPC_GPIO->DIR[PORT0] &= ~(1<<27);	// MISO is input
+
+	LPC_IOCON->PIO1_16 &= ~(1<<4);		// Pull up resistor enabled
+
+	LPC_GPIO->SET[PORT0] |= (1<<22);	// Pull the REQN high until we need it
+
+	LPC_GPIO->CLR[PORT1] |= (1<<21);	// Reset the proc
+	delay_ms(50);
+	LPC_GPIO->SET[PORT1] |= (1<<21);	// Pull reset high
+	delay_ms(100);
+
+	LPC_SYSCON->SYSAHBCLKCTRL |= (1<<19) | (1<<24);		// Enable the pin interrupts reg and group0 interrupts
+	LPC_SYSCON->PINSEL[0] = 16 + 24 | (1<<5);			// RDYN line
+	LPC_GPIO_PIN_INT->ISEL &= ~(1<<0);					// Edge sensitive
+	LPC_GPIO_PIN_INT->IENR |= (1<<0);
+	LPC_GPIO_PIN_INT->SIENR |= (1<<0);    				// Enable Rising edge interrupt
+	LPC_GPIO_PIN_INT->IST = (1<<0);
+	NVIC_EnableIRQ(PIN_INT0_IRQn);						// Enable the IRQ
+
+
+	uint8_t rec[32];
+
+	// Setup the SSP0
+	ssp0Init();
+
+	// Now, send the setup data to the chip
+
+	lpcprintf("%d msgs\r\n", NB_SETUP_MESSAGES);
+
+	for(int i = 0; i < NB_SETUP_MESSAGES; i++){
+
+//		delay_ms(1);
+//
+//		memset(rec, 0, 32);
+//		ssp0Receive(rec, 32);
+//		lpcprintf("Rec: ");
+//		for(int i = 0; i < 32; i++){
+//			lpcprintf("%02X ", rec[i]);
+//		}
+//		lpcprintf("\r\n\r\n");
+
+		lpcprintf("%d len %02X: ", i, setupMessages[i].buffer[0]);
+
+		uint8_t sendData[32];
+		uint8_t len = setupMessages[i].buffer[0];
+		memcpy(&sendData[0], setupMessages[i].buffer, len + 1);
+
+		for(int j = 0; j < len; j++){
+			lpcprintf("%02X ", setupMessages[i].buffer[j+1]);
+		}
+
+//		lpcprintf("\r\n");
+//
+//		for(int j = 0; j < len + 1; j++){
+//			lpcprintf("%02X ", sendData[j]);
+//		}
+
+		lpcprintf("\r\n\r\n");
+
+		// Set REQN low to request the chip
+		BLE_REQUEST;
+		// Wait for RDYN to go low
+		while(LPC_GPIO->B1[16]){
+			// Waiting for RDYN to go low
+		}
+		lpcprintf("Send..");
+		uint8_t ret = 0;
+		for(int i = 0; i < len + 1; i++){
+			ret = ssp0SendChar(sendData[i]);
+			lpcprintf("%02X ", ret);
+		}
+		//ssp0Send(sendData, len + 1);
+		BLE_DEREQUEST;
+		while(!LPC_GPIO->B1[16]){
+			// Waiting for RDYN to go high
+		}
+		lpcprintf("done\r\n");
+
+//		uint8_t rec[32];
+//		memset(rec, 0, 32);
+//		ssp0Receive(rec, 32);
+//		lpcprintf("Rec: ");
+//		for(int i = 0; i < 32; i++){
+//			lpcprintf("%02X ", rec[i]);
+//		}
+//		lpcprintf("\r\n\r\n");
+
+
+	}
+
+	memset(rec, 0, 32);
+	while(LPC_GPIO->B1[16]){
+		// Waiting for RDYN to go low
+	}
+	BLE_REQUEST;
+	ssp0Receive(rec, 32);
+	BLE_DEREQUEST;
+	lpcprintf("Conn: ");
+	for(int i = 0; i < 32; i++){
+		lpcprintf("%02X ", rec[i]);
+	}
+	lpcprintf("\r\n\r\n");
+
+	delay_ms(50);
+
+//	memset(rec, 0, 32);
+//	ssp0Receive(rec, 32);
+//	lpcprintf("Rec: ");
+//	for(int i = 0; i < 32; i++){
+//		lpcprintf("%02X ", rec[i]);
+//	}
+//	lpcprintf("\r\n\r\n");
+
+	uint8_t ret = 0;
+	uint8_t cmd[32];
+	memset(cmd, 0, 32);
+
+//	lpcprintf("Send 09 ");
+//	// Ask for 09
+//	uint8_t cmd[32];
+//	memset(cmd, 0, 32);
+//	cmd[0] = 0x01;
+//	cmd[1] = 0x09;
+//	BLE_REQUEST;
+//	// Wait for RDYN to go low
+//	while(LPC_GPIO->B1[16]){
+//		// Waiting for RDYN to go low
+//	}
+//	//ssp0Send(cmd, 2);
+//	uint8_t ret = 0;
+//	for(int i = 0; i < 20; i++){
+//		ret = ssp0SendChar(cmd[i]);
+//		lpcprintf("%02X ", ret);
+//	}
+//	BLE_DEREQUEST;
+//	while(!LPC_GPIO->B1[16]){
+//		// Waiting for RDYN to go high
+//	}
+//
+//	//delay_ms(1);
+//	lpcprintf("\r\n\r\n");
+//
+//
+//	lpcprintf("Send get address ");
+//	// Ask for address
+//	cmd[0] = 0x01;
+//	cmd[1] = 0x0A;
+//	BLE_REQUEST;
+//	// Wait for RDYN to go low
+//	while(LPC_GPIO->B1[16]){
+//		// Waiting for RDYN to go low
+//	}
+//
+//	memset(rec, 0, 32);
+//	//ssp0Send(cmd, 2);
+//	ret = 0;
+//	for(int i = 0; i < 20; i++){
+//		ret = ssp0SendChar(cmd[i]);
+//		lpcprintf("%02X ", ret);
+//	}
+//	BLE_DEREQUEST;
+//	while(!LPC_GPIO->B1[16]){
+//		// Waiting for RDYN to go high
+//	}
+//
+////	//delay_ms(1);
+////
+////	// Get the response
+////	while(LPC_GPIO->B1[16]){
+////		// Waiting for RDYN to go low
+////	}
+////	BLE_REQUEST;
+////	ssp0Receive(rec, 32);
+////	BLE_DEREQUEST;
+////	lpcprintf("Addr: ");
+////	for(int i = 0; i < 32; i++){
+////		lpcprintf("%02X ", rec[i]);
+////	}
+//	lpcprintf("\r\n\r\n");
+
+
+	lpcprintf("Send broadcast ");
+	cmd[0] = 0x05;
+	cmd[1] = 0x1C;
+	cmd[2] = 0x00;
+	cmd[3] = 0x00;
+	cmd[4] = 0xA0;
+	cmd[5] = 0x00;
+	BLE_REQUEST;
+	// Wait for RDYN to go low
+	while(LPC_GPIO->B1[16]){
+		// Waiting for RDYN to go low
+	}
+
+	memset(rec, 0, 32);
+//	ssp0Send(cmd, 6);
+	ret = 0;
+	for(int i = 0; i < 20; i++){
+		ret = ssp0SendChar(cmd[i]);
+		lpcprintf("%02X ", ret);
+	}
+	BLE_DEREQUEST;
+	while(!LPC_GPIO->B1[16]){
+		// Waiting for RDYN to go high
+	}
+	lpcprintf("\r\n\r\n");
+
+	//delay_ms(1);
+
+	while(LPC_GPIO->B1[16]){
+		// Waiting for RDYN to go low
+	}
+	BLE_REQUEST;
+	ssp0Receive(rec, 32);
+	BLE_DEREQUEST;
+	lpcprintf("Conn: ");
+	for(int i = 0; i < 32; i++){
+		lpcprintf("%02X ", rec[i]);
+	}
+	lpcprintf("\r\n\r\n");
+
+
+}

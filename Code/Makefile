@@ -2,13 +2,14 @@ PROJECT=dc22-dc801-party-badge
 
 LDCRIPT=core/lpc1347.ld
 
-OPTIMIZATION = 1
+OPTIMIZATION = 0
 
 #########################################################################
 
 SRC=$(wildcard core/*.c) \
     $(wildcard core/libs/*.c) \
     $(wildcard drivers/*.c) \
+    $(wildcard drivers/ble/*.c) \
     $(wildcard *.c)
 
 
@@ -18,6 +19,7 @@ LSSFILES= $(SRC:.c=.lst)
 HEADERS=$(wildcard core/*.h) \
 		$(wildcard core/inc/*.h) \
 		$(wildcard drivers/*.h) \
+		$(wildcard drivers/ble/*.h) \
 		$(wildcard *.h)
 
 #  Compiler Options
@@ -30,11 +32,11 @@ GCFLAGS = -std=gnu99 -mcpu=cortex-m3 -mthumb -O$(OPTIMIZATION) -I. -Icore -Icore
 # Debug stuff
 #GCFLAGS += -Wa,-adhlns=$(<:.c=.lst),-gstabs -g 
 
-LDFLAGS =  -mcpu=cortex-m3 -mthumb -O$(OPTIMIZATION) -nostartfiles  -T$(LDCRIPT) 
+LDFLAGS =  -mcpu=cortex-m3 -mthumb -O$(OPTIMIZATION) -nostartfiles  -T$(LDCRIPT) -Wl,-Map=$(PROJECT).map
 
 # This is where you stuck your ARM toolchain that you downloaded from
 # https://launchpad.net/gcc-arm-embedded
-TOOLCHAINPATH = /opt/gcc-arm-none-eabi/bin
+TOOLCHAINPATH = /usr/bin/
 
 #  Compiler/Linker Paths
 GCC = $(TOOLCHAINPATH)/arm-none-eabi-gcc
@@ -50,8 +52,9 @@ all: tools firmware.bin Makefile stats
 tools:
 	make -C tools
 	
-firmware.bin: $(PROJECT).elf Makefile
+firmware.bin: $(PROJECT).elf Makefile tools
 	$(OBJCOPY) -R .stack -O binary $(PROJECT).elf firmware.bin
+	$(OBJCOPY) -R .stack -O ihex $(PROJECT).elf firmware.hex
 	tools/lpcrc firmware.bin
 	tools/padto firmware.bin 64
 	
@@ -83,6 +86,9 @@ clean:
 flash: firmware.bin
 	cp firmware.bin /Volumes/CRP\ DISABLD/
 	diskutil eject `diskutil list | grep -B 2 CRP | grep dev`
+	
+copy: firmware.bin stats
+	cp firmware.bin /media/sf_VM_Shared/
 
 
 .PHONY : clean all flash tools
