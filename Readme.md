@@ -106,6 +106,8 @@ game anyway.  Ah well.
 
 ## Programming
 
+Download the new firmware 2.1 from [here](Firmware/firmware.bin) or see below to compile it yourself.
+
 To program, hook the USB up to your computer.  Hold down button B and tap reset.  It should then show up as a USB stick or hard
 drive as CRP_DISABLED.  Delete 'firmware.bin' off the stick.  Then drag and drop the new 'firmware.bin' onto the stick.  After it has
 copied, tap reset to boot to the new code.
