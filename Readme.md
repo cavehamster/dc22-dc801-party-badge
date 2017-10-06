@@ -140,7 +140,7 @@ reset to return to normal mode.
 
 ## ARM toolchain for GCC
 
- Luckily for us, there is a nice Ubuntu ppa that covers this.  It's pretty simple to get installed ([taken from launchpad](https://launchpad.net/~team-gcc-arm-embedded/+archive/ubuntu/ppa)):
+ Luckily for us, there is a nice Ubuntu ppa that has us covered.  It's pretty simple to get installed ([taken from launchpad](https://launchpad.net/~team-gcc-arm-embedded/+archive/ubuntu/ppa)):
 
  ```
  $ sudo add-apt-repository ppa:team-gcc-arm-embedded/ppa
@@ -148,7 +148,7 @@ reset to return to normal mode.
  $ sudo apt-get install gcc-arm-embedded
  ```
  
- Step 3 is a 70mB download from a slow server, so go get yourself a beer - you deserve it!
+ The third command is a 70mB download from a slow server, so go get yourself a beer - you deserve it!
 
  Make sure it works
 
@@ -185,4 +185,4 @@ Historic updates:
 
 2.1 update:
 
-1. Move the BTLE RDYN from VFD Strobe to a spare pin on the chip (see ![this image](dc22_modification.png))
+1. Move the BTLE RDYN from VFD Strobe to a spare pin on the chip (see [this image](dc22_modification.png))
